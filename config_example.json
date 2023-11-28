@@ -1,0 +1,12 @@
+{
+	"token": "MyDiscordToken",
+    "clientId": "MyDiscordClientId",
+	"cocApiToken" : "MyClashOfClansApiToken",
+	"cocApiDomain" : "https://cocproxy.royaleapi.dev" ,
+    "weeksToSaveCapitalRaids" : "6",
+	"dbHost" : "MyDbServer",
+	"dbUser" : "MyDbUser",
+	"dbPass" : "MyDbPass",
+	"dbName" : "MyDbName",
+	"dbPort" : "3306"
+}
