@@ -11,3 +11,6 @@
 - [ ] Add Info/Settings command for Notification channels etc
 - [ ] Add Clangames feature?
 - [ ] Auto update commands on startup
+
+## Notes
+Used this proxy because server does not have an statis IP address https://docs.royaleapi.com/proxy.html
