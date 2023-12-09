@@ -11,8 +11,13 @@ const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
 module.exports = {
     autoCompleteUsers,
     routConvert,
-    updateClanMembers
+    updateClanMembers,
+    delay
 }
+
+function delay(time) {
+    return new Promise(resolve => setTimeout(resolve, time));
+} 
 
 async function autoCompleteUsers(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
