@@ -51,7 +51,7 @@ async function capitalWeekendRaid() {
                             const interaction = {};
                             interaction.guildId = guildID;
                             await pre.updateClanMembers(interaction);
-                            await delay(4000);
+                            await pre.delay(4000);
 
 
                             //for saving it in the database later
