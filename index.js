@@ -34,6 +34,15 @@ client.once(Events.ClientReady, () => {
 	deploy();
 });*/
 
+client.on('disconnect', (event) => {
+	console.error(`Disconnected: ${event.reason} (${event.code})`);
+	// Attempt to reconnect after delay
+	setTimeout(() => {
+		console.log(`Trying to connect again...`);
+		client.login(token);
+	}, 5000);
+});
+
 client.on('interactionCreate', async interaction => {
 	if (interaction.isChatInputCommand()) {
 		const command = client.commands.get(interaction.commandName);
@@ -62,6 +71,7 @@ client.on('interactionCreate', async interaction => {
 	}
 });
 
+console.log(`Trying to connect`);
 client.login(token);
 
 
@@ -70,5 +80,5 @@ async function keepDatabaseAlive() {
 	const rows = await query('SELECT 1;');
 	console.log("Kept Database alive");
 }
-//required for my own database, if you dont need this, you can delete it, but it should basically have no impact on performance
+//required for my own database, if you dont need this, you can delete it.should have no impact on performance
 setInterval(keepDatabaseAlive, 1 * 60 * 60 * 1000);
