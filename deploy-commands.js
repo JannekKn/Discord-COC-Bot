@@ -16,9 +16,9 @@ const rest = new REST().setToken(token);
 
 //del commands
 // for guild-based commands
-rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] })
-	.then(() => console.log('Successfully deleted all guild commands.'))
-	.catch(console.error);
+//rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] })
+//	.then(() => console.log('Successfully deleted all guild commands.'))
+//	.catch(console.error);
 
 // for global commands
 rest.put(Routes.applicationCommands(clientId), { body: [] })
@@ -42,7 +42,11 @@ rest.put(Routes.applicationCommands(clientId), { body: [] })
         );
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+
 	} catch (error) {
 		console.error(error);
-	}
+	} finally {
+        // This will ensure that the script ends after the asynchronous operations are completed
+        process.exit();
+    }
 })();
