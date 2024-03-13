@@ -64,6 +64,8 @@ module.exports = {
 		else if (interaction.options.getSubcommand() === 'remove') {
 			//remove link
 			await interaction.reply("You are on the way to remove the clan from this Discord Server. If you do this, everything you configured will be deleted! Is that what you want to do?");
+
+			//NOTHING DONE HERE
 		}
 	},
 };
