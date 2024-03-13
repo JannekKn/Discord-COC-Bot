@@ -26,20 +26,23 @@ rest.put(Routes.applicationCommands(clientId), { body: [] })
 	.catch(console.error);
 
     
-// and deploy your commands!
+// deploy commands globally
 (async () => {
 	try {
 		console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
-		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
+			//this was for guild-based commands - i dont use that here, but could be used
+			//Routes.applicationGuildCommands(clientId, guildId), 
+			
+
+			//route for global commands
             Routes.applicationCommands(clientId),
             { body: commands },
         );
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 	} catch (error) {
-		// And of course, make sure you catch and log any errors!
 		console.error(error);
 	}
 })();
