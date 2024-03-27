@@ -41,9 +41,7 @@ async function autoCompleteUsers(interaction, guildId, value) {
 
 async function autoCompleteWarDates(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    console.log("guildId :" + guildId)
     const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
-    console.log(result)
     //Put all users into Array
     let array = [];
     for (let item of result) {

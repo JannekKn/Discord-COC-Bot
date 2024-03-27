@@ -22,15 +22,11 @@ async function warLog(interaction, warDayStartDate) {
     const results = await query("SELECT memberTag, memberName, attackCount FROM clanwars WHERE guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
 
     if (results && results.length) {
-        console.log(results)
-        console.log(results[1].memberTag)
         let postChunks = [];
         postChunks.push(":woman_technologist::printer: Clanwar from " + warDayStartDate);
 
         i = 1;
         for (let member of results) {
-            console.log(member)
-            console.log(member.memberTag, member.memberName, member.attackCount);
             var emote;
             if(member.attackCount > 0) {
                 emote = " :white_check_mark: ";

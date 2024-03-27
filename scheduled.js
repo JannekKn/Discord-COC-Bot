@@ -43,8 +43,6 @@ async function capitalWeekendRaid() {
       const clantag = item.clanTag;
       const guildID = item.guildID;
 
-      console.log(clantag)
-
       await axios.get(cocApiDomain + '/v1/clans/' + pre.routConvert(clantag) + '/capitalraidseasons', config)
         .then(async function (response) {
           if (response.data.items.length > 0) {
@@ -101,7 +99,6 @@ async function capitalWeekendRaid() {
                 let notAttacking = users.filter(user => {
                   return !attackingmembers.some(attacker => attacker.tag === user.userTag);
                 });
-                console.log(notAttacking)
                 if (notAttacking.length > 0) {
                   postChunks.push("\n\nThese people did not attack this week:\n");
                   let i = 1;
