@@ -173,7 +173,7 @@ async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannel
   if (timeDifferenceInMs <= 10000) {
     console.log("The time difference was under 10seconds")
   } else {
-    dcWarSchedduled.push()
+    dcWarSchedduled.push(guildID)
 
     console.log("War schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
 
