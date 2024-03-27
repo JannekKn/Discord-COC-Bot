@@ -125,14 +125,13 @@ module.exports = {
 
 				let clanTag = clan[0].clanTag;
 
-				const attacks = await query('SELECT memberTag, memberName, SUM(CASE WHEN attacked = 1 THEN 1 ELSE 0 END) AS actualAttacks, COUNT(*) AS possibleAttacks FROM capitalRaids WHERE clanTag = ' + db.escape(clanTag) + ' AND guildID = ' + db.escape(interaction.guildId) + ' GROUP BY memberTag, memberName ORDER BY memberName;');
-
+				const attacks = await query('SELECT memberTag, memberName, SUM(CASE WHEN attacked = 1 THEN 1 ELSE 0 END) AS actualAttacks, COUNT(*) AS possibleAttacks, ROUND((SUM(CASE WHEN attacked = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(*)) AS percentage FROM capitalRaids WHERE clanTag = ' + db.escape(clanTag) + ' AND guildID = ' + db.escape(interaction.guildId) + ' GROUP BY memberTag, memberName ORDER BY percentage DESC, memberName ');
 
 				if (attacks && attacks.length) {
 					var membersString = ":thinking: Here is your list of how often people attack in the last capital raids: \n"
                     membersString += "```";
                     for (let item of attacks) {
-                        membersString += item.actualAttacks + "/" + item.possibleAttacks + " " + item.memberName + " (" + item.memberTag + ")\n";
+                        membersString += item.percentage + "% (" + item.actualAttacks + "/" + item.possibleAttacks + ") " + item.memberName + " (" + item.memberTag + ")\n";
                     }
                     membersString += "```";
 					await interaction.editReply({ content: membersString, ephemeral: true });
