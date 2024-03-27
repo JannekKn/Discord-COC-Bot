@@ -4,6 +4,7 @@ const util = require('util');
 const query = util.promisify(db.query).bind(db);
 //Axios for requests
 const axios = require('axios');
+const moment = require('moment'); 
 //Coc api Token and domain values
 const { cocApiToken, cocApiDomain } = require('../config.json');
 const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
@@ -12,16 +13,17 @@ module.exports = {
     autoCompleteUsers,
     routConvert,
     updateClanMembers,
-    delay
+    delay,
+    autoCompleteWarDates
 }
 
 function delay(time) {
     return new Promise(resolve => setTimeout(resolve, time));
-} 
+}
 
 async function autoCompleteUsers(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    const users = await query("SELECT userName FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + ";");
+    const users = await query("SELECT userName FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + " FETCH FIRST 25 ROWS ONLY;");
 
     //Put all users into Array
     let userArray = [];
@@ -34,8 +36,26 @@ async function autoCompleteUsers(interaction, guildId, value) {
         await interaction.respond(
             userArray.map(choice => ({ name: choice, value: choice })),
         );
-    } else {
-        await interaction.respond();
+    }
+}
+
+async function autoCompleteWarDates(interaction, guildId, value) {
+    var userinput = db.escape('%' + value + '%');
+    console.log("guildId :" + guildId)
+    const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
+    console.log(result)
+    //Put all users into Array
+    let array = [];
+    for (let item of result) {
+        const formattedDate = moment(item.warStartDay).format("YYYY-MM-DD");
+        array.push(formattedDate);
+    }
+
+    //If there are more than 25 options, do nothing, becuase discord is stupid
+    if (array.length <= 25) {
+        await interaction.respond(
+            array.map(choice => ({ name: choice, value: choice })),
+        );
     }
 }
 
@@ -99,6 +119,10 @@ async function updateClanMembers(interaction) {
                     db.query("DELETE FROM capitalRaids WHERE guildId = '" + interaction.guildId + "' AND memberTag NOT IN (" + userTagsAsString + ");", function (err, result, fields) {
                         if (err) throw err;
                     });
+
+                    /*db.query("DELETE FROM clanwars WHERE guildId = '" + interaction.guildId + "' AND memberTag NOT IN (" + userTagsAsString + ");", function (err, result, fields) {
+                        if (err) throw err;
+                    });*/
                 });
             })
             .catch(function (error) {
