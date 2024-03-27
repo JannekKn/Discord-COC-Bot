@@ -9,6 +9,9 @@ const path = require('node:path');
 const { ActivityType, Client, Collection, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
 const { token } = require('./config.json');
 
+
+const of = require("./preset/otherfunctions.js");
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
@@ -68,6 +71,21 @@ client.on('interactionCreate', async interaction => {
 		} catch (error) {
 			console.error(error);
 		}
+	}
+	else if (interaction.isButton()) {
+		//i use the underscore here to get variables through the button and execute the correct thing
+		if (interaction.customId.includes('_')) {
+			const customcommand = interaction.customId.split('_')[0];
+			if(customcommand == "warlog") {
+				const date = interaction.customId.split('_')[1];
+				of.warLog(interaction, date);
+			} 
+			//here possible other ones with underscore
+		}
+		else {
+			// Code to handle buttons without underscore at some point if there should come more buttons ^^
+		}
+
 	}
 });
 
