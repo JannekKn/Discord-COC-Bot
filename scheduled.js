@@ -166,9 +166,8 @@ const fs = require('fs').promises;
 async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannelId) {
   const currentTime = moment.utc();
   const timeDifferenceInMs = apiCallTime - currentTime;
-
   if (timeDifferenceInMs <= 10000) {
-    console.log("The time difference was under 10seconds")
+    console.log("The time difference was under 10seconds: " + timeDifferenceInMs)
   } else {
     dcWarSchedduled.push(guildID)
 
@@ -309,7 +308,7 @@ async function warRequest() {
         .then(async function (response) {
           const war = response.data;
 
-          const endingWarTime = moment.utc(war.startTime, 'YYYYMMDDTHHmmss.SSS[Z]');
+          const endingWarTime = moment.utc(war.endTime, 'YYYYMMDDTHHmmss.SSS[Z]');
           const apiCallTime = endingWarTime.subtract(10, 'seconds');
 
           if (war.state == "inWar" || war.state == "preparation") {
