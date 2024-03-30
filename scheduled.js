@@ -194,10 +194,10 @@ async function warOver(guildId, clanTag, notifyChannelId) {
       let endedAt = endWarTime.format('DD.MM.YYYY');
 
       //create an interaction, because i programmed updating like that...
-      const interaction = {};
+      /*const interaction = {};
       interaction.guildId = guildId;
       await pre.updateClanMembers(interaction);
-      await pre.delay(4000);
+      await pre.delay(4000);*/
 
       
       let postChunks = [];
