@@ -62,6 +62,7 @@ function routConvert(stringWithRout) {
 }
 
 async function updateClanMembers(interaction) {
+    console.log("Updating members");
 
     const rows = await query('SELECT clanTag FROM guildToClan WHERE guildID = ' + interaction.guildId);
     if (rows && rows.length) {
