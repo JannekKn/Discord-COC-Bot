@@ -19,23 +19,65 @@ async function warLog(interaction, warDayStartDate) {
     //ander YRCCP980
     //older VPCCPORO
 
-    const results = await query("SELECT memberTag, memberName, attackCount FROM clanwars WHERE guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
+    //get war
+    const resultsWars = await query("SELECT * FROM clanwars WHERE guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
 
-    if (results && results.length) {
+    if (resultsWars && resultsWars.length) {
+
+        const war = resultsWars[0];
+
+        //get members of war
+        var resultsWarMembers = await query("SELECT * FROM clanwarmembers WHERE warId = " + db.escape(war.warId) + ";");
+
         let postChunks = [];
         postChunks.push(":woman_technologist::printer: Clanwar from " + warDayStartDate);
+        postChunks.push("\nEnemy: " + war.opponentName + "(" + war.opponentTag + ")");
+        postChunks.push("\nWon: " + war.won);
+        postChunks.push("\nWar size: " + war.teamSize + "v" + war.teamSize);
+        postChunks.push("\nUsed attacks: " + war.clanUsedAttacks + " - " + war.opponentUsedAttacks);
+        postChunks.push("\nStars: " + war.clanStars + " - " + war.opponentStars);
+        postChunks.push("\nPercentage destroyed: " + war.clanPercentage + " - " + war.opponentPercentage);
 
-        i = 1;
-        for (let member of results) {
+        resultsWarMembers.sort((a, b) => a.memberPosition - b.memberPosition);
+        //console.log(resultsWarMembers);
+        //process the members
+        for (let member of resultsWarMembers) {
+
+            //console.log(member)
+
+            //how many attacks did member do
+            let attackCount = 0;
+            if (member.attack1 != 0) { attackCount++ }
+            if (member.attack2 != 0) { attackCount++ }
+
+            //show member in discord Message
             var emote;
-            if(member.attackCount > 0) {
+            if (attackCount == 2) {
                 emote = " :white_check_mark: ";
-            } else {
+            }
+            else if (attackCount == 1) {
+                emote = " :negative_squared_cross_mark: ";
+            }
+            else {
                 emote = " :x: ";
             }
-            //console.log(i + "." + emote + " " + member.attackCount + "/2 " + member.memberName + " (" + member.memberTag + ")")
-            postChunks.push("\n" + i + "." + emote + " " + member.attackCount + "/2 " + member.memberName + " (" + member.memberTag + ")");
-            i++;
+            postChunks.push("\n" + member.memberPosition + "." + emote + " " + attackCount + "/2 " + member.memberName + " (" + member.memberTag + ")");
+
+            let attacks = [];
+            attacks.push(member.attack1);
+            attacks.push(member.attack2);
+
+            //console.log(attacks);
+
+            //get the attacks from this member
+            for (let attackId of attacks) {
+                if (attackId != 0) {
+                    let resultsAttack = await query("SELECT * FROM clanwarattacks WHERE attackID = " + db.escape(attackId) + ";");
+                    //console.log(resultsAttack);
+                    let attack = resultsAttack[0];
+                    postChunks.push("\n  - " + attack.defenderPosition + ". " + attack.stars + "⭐ (" + attack.destructionPercentage + "%) Enemy: " + attack.defenderName + " (" + attack.defenderTag + ")");
+                }
+            }
         }
 
         const chunks = [];
@@ -56,7 +98,7 @@ async function warLog(interaction, warDayStartDate) {
 
         message = 0;
         for (let chunk of chunks) {
-            if(message == 0) {
+            if (message == 0) {
                 await interaction.reply({ content: chunk, ephemeral: true });
             } else {
                 await interaction.followUp({ content: chunk, ephemeral: true });

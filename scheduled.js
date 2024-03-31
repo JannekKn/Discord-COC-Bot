@@ -175,7 +175,7 @@ async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannel
 
     setTimeout(async () => {
       await warOver(guildID, clantag, notifyChannelId);
-    }, timeDifferenceInMs);
+    }, timeDifferenceInMs); //1
   }
 }
 
@@ -199,7 +199,7 @@ async function warOver(guildId, clanTag, notifyChannelId) {
       await pre.updateClanMembers(interaction);
       await pre.delay(4000);*/
 
-      
+
       let postChunks = [];
       //Calculation, because the war ends in a few secs
       var won;
@@ -229,22 +229,10 @@ async function warOver(guildId, clanTag, notifyChannelId) {
       postChunks.push("\nWon: " + won);
       postChunks.push("\nWar size: " + war.teamSize + "v" + war.teamSize);
       postChunks.push("\nUsed attacks: " + war.clan.attacks + " - " + war.opponent.attacks);
-      postChunks.push("\nStars: " + war.clan.stars + " - " + war.opponent.attacks);
-      postChunks.push("\nPercentage destroyed: " + war.clan.destructionPercentage + " - " + war.opponent.attacks);
+      postChunks.push("\nStars: " + war.clan.stars + " - " + war.opponent.stars);
+      postChunks.push("\nPercentage destroyed: " + war.clan.destructionPercentage + " - " + war.opponent.destructionPercentage);
 
       postChunks.push("\n\nThis war and who attacked will now save to the database :)");
-
-
-      //for saving it in the database later
-      let membersListToSave = [];
-
-      for (let member of war.clan.members) {
-        if (member.hasOwnProperty('attacks')) {
-          membersListToSave.push({ tag: member.tag, knownName: member.name, attackCount: member.attacks.length });
-        } else {
-          membersListToSave.push({ tag: member.tag, knownName: member.name, attackCount: 0 });
-        }
-      }
 
       const warLogButton = new ButtonBuilder()
         .setCustomId('warlog_' + warstartTimeSQL)
@@ -283,11 +271,111 @@ async function warOver(guildId, clanTag, notifyChannelId) {
         }
       }
 
-      for (let saveMember of membersListToSave) {
-        db.query("INSERT INTO clanwars (warStartDay, clanTag, guildID, memberTag, memberName, attackCount) VALUES (" + db.escape(warstartTimeSQL) + ", " + db.escape(clanTag) + ", " + db.escape(guildId) + ", " + db.escape(saveMember.tag) + ", " + db.escape(saveMember.knownName) + ", " + db.escape(saveMember.attackCount) + ")",
-          function (err, result, fields) {
-            if (err) throw err;
-          });
+      function getOpponentMapPosition(clanWarData, memberTag) {
+        const opponentMembers = clanWarData.opponent.members;
+
+        for (const member of opponentMembers) {
+          if (member.tag === memberTag) {
+            return member.mapPosition;
+          }
+        }
+        return null;
+      }
+
+      function getOpponentName(clanWarData, memberTag) {
+        const opponentMembers = clanWarData.opponent.members;
+
+        for (const member of opponentMembers) {
+          if (member.tag === memberTag) {
+            return member.name;
+          }
+        }
+        return null;
+      }
+
+      function fillToTwoWithNumZero(arr) {
+        if (arr.length === 2) {
+          return arr;
+        }
+        for (let i = arr.length; i < 2; i++) {
+          arr.push(0);
+        }
+
+        return arr;
+      }
+
+
+
+      const attackPromise = new Promise((resolve, reject) => {
+        db.query(
+          "INSERT INTO clanwars (clanTag, guildID, warStartDay, opponentTag, opponentName, won, teamSize, clanUsedAttacks, opponentUsedAttacks, clanStars, opponentStars, clanPercentage, opponentPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            clanTag,
+            guildId,
+            warstartTimeSQL,
+            war.opponent.tag,
+            war.opponent.name,
+            won,
+            war.teamSize,
+            war.clan.attacks,
+            war.opponent.attacks,
+            war.clan.stars,
+            war.opponent.stars,
+            war.clan.destructionPercentage,
+            war.opponent.destructionPercentage
+          ],
+          (err, result, fields) => {
+            if (err) reject(err);
+            resolve(result.insertId);
+          }
+        );
+      });
+
+      const warId = await attackPromise;
+
+      for (let member of war.clan.members) {
+        var attackIDs = [];
+
+        if (member.hasOwnProperty('attacks')) {
+          for (const attack of member.attacks) {
+            const attackPrimise = new Promise((resolve, reject) => {
+              db.query(
+                "INSERT INTO clanwarattacks (defenderTag, defenderName, defenderPosition, stars, destructionPercentage) VALUES (?, ?, ?, ?, ?)",
+                [
+                  attack.defenderTag,
+                  getOpponentName(war, attack.defenderTag),
+                  getOpponentMapPosition(war, attack.defenderTag),
+                  attack.stars,
+                  attack.destructionPercentage
+                ],
+                (err, result, fields) => {
+                  if (err) reject(err);
+                  resolve(result.insertId);
+                }
+              );
+            });
+
+            attackIDs.push(await attackPrimise);
+          }
+        }
+
+        //Fill with 0, when attack1 or attack2 is 0 that means "didnt attack"
+        attackIDs = fillToTwoWithNumZero(attackIDs);
+
+        db.query(
+          "INSERT INTO clanwarmembers (warId, memberTag, memberName, memberPosition, attack1, attack2) VALUES (?, ?, ?, ?, ?, ?)",
+          [
+            warId,
+            member.tag,
+            member.name,
+            member.mapPosition,
+            attackIDs[0],
+            attackIDs[1]
+          ],
+          (err, result, fields) => {
+            if (err) throw (err);
+          }
+        );
       }
     })
     .catch(function (error) {
@@ -298,7 +386,7 @@ async function warOver(guildId, clanTag, notifyChannelId) {
 
 async function warRequest() {
 
-  const allServers = await query('SELECT * FROM guildToClan WHERE notifyChannelId IS NOT NULL');
+  const allServers = await query('SELECT * FROM guildToClan WHERE notifyChannelId IS NOT NULL'); //466971916108824577
   if (allServers && allServers.length) {
     for (let item of allServers) {
       const clantag = item.clanTag;
