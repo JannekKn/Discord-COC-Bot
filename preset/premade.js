@@ -41,7 +41,7 @@ async function autoCompleteUsers(interaction, guildId, value) {
 
 async function autoCompleteWarDates(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
+    const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE isLeague = 0 guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
     //Put all users into Array
     let array = [];
     for (let item of result) {
@@ -119,9 +119,6 @@ async function updateClanMembers(interaction) {
                         if (err) throw err;
                     });
 
-                    /*db.query("DELETE FROM clanwars WHERE guildId = '" + interaction.guildId + "' AND memberTag NOT IN (" + userTagsAsString + ");", function (err, result, fields) {
-                        if (err) throw err;
-                    });*/
                 });
             })
             .catch(function (error) {

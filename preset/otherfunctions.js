@@ -4,6 +4,7 @@ const util = require('util');
 const query = util.promisify(db.query).bind(db);
 //Axios for requests
 const axios = require('axios');
+const { inlineCode, codeBlock } = require('discord.js');
 //Coc api Token and domain values
 const pre = require("../preset/premade.js");
 const of = require("../preset/otherfunctions.js");
@@ -20,7 +21,7 @@ async function warLog(interaction, warDayStartDate) {
     //older VPCCPORO
 
     //get war
-    const resultsWars = await query("SELECT * FROM clanwars WHERE guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
+    const resultsWars = await query("SELECT * FROM clanwars WHERE isLeague = 0 guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
 
     if (resultsWars && resultsWars.length) {
 
@@ -30,13 +31,13 @@ async function warLog(interaction, warDayStartDate) {
         var resultsWarMembers = await query("SELECT * FROM clanwarmembers WHERE warId = " + db.escape(war.warId) + ";");
 
         let postChunks = [];
-        postChunks.push(":woman_technologist::printer: Clanwar from " + warDayStartDate);
-        postChunks.push("\nEnemy: " + war.opponentName + "(" + war.opponentTag + ")");
+        postChunks.push("👩‍💻🖨️ Clanwar from " + warDayStartDate);
+        postChunks.push("\n\nOpponent clan: " + war.opponentName + "(" + war.opponentTag + ")");
         postChunks.push("\nWon: " + war.won);
         postChunks.push("\nWar size: " + war.teamSize + "v" + war.teamSize);
-        postChunks.push("\nUsed attacks: " + war.clanUsedAttacks + " - " + war.opponentUsedAttacks);
-        postChunks.push("\nStars: " + war.clanStars + " - " + war.opponentStars);
-        postChunks.push("\nPercentage destroyed: " + war.clanPercentage + " - " + war.opponentPercentage);
+        postChunks.push("\nUsed attacks: " + war.clanUsedAttacks + "v" + war.opponentUsedAttacks);
+        postChunks.push("\nStars: " + war.clanStars + "v" + war.opponentStars);
+        postChunks.push("\nPercentage destroyed: " + war.clanPercentage + "v" + war.opponentPercentage + "\n");
 
         resultsWarMembers.sort((a, b) => a.memberPosition - b.memberPosition);
         //console.log(resultsWarMembers);
@@ -53,15 +54,15 @@ async function warLog(interaction, warDayStartDate) {
             //show member in discord Message
             var emote;
             if (attackCount == 2) {
-                emote = " :white_check_mark: ";
+                emote = " ✅ ";
             }
             else if (attackCount == 1) {
-                emote = " :negative_squared_cross_mark: ";
+                emote = " ☑️ ";
             }
             else {
-                emote = " :x: ";
+                emote = " ❌ ";
             }
-            postChunks.push("\n" + member.memberPosition + "." + emote + " " + attackCount + "/2 " + member.memberName + " (" + member.memberTag + ")");
+            postChunks.push("\n" + member.memberPosition + "." + emote + attackCount + "/2 " + member.memberName /*+ " (" + member.memberTag + ")"*/);
 
             let attacks = [];
             attacks.push(member.attack1);
@@ -70,13 +71,21 @@ async function warLog(interaction, warDayStartDate) {
             //console.log(attacks);
 
             //get the attacks from this member
+            i = 1;
             for (let attackId of attacks) {
                 if (attackId != 0) {
                     let resultsAttack = await query("SELECT * FROM clanwarattacks WHERE attackID = " + db.escape(attackId) + ";");
                     //console.log(resultsAttack);
                     let attack = resultsAttack[0];
-                    postChunks.push("\n  - " + attack.defenderPosition + ". " + attack.stars + "⭐ (" + attack.destructionPercentage + "%) Enemy: " + attack.defenderName + " (" + attack.defenderTag + ")");
+
+                    let starEmoji = "";
+                    for (let i = 0; i < attack.stars; i++) {
+                        starEmoji += "⭐";
+                    }
+
+                    postChunks.push("\n - Attack " + i + " " + starEmoji + " (" + attack.destructionPercentage + "%) on #" + + attack.defenderPosition);
                 }
+                i++;
             }
         }
 
@@ -99,9 +108,9 @@ async function warLog(interaction, warDayStartDate) {
         message = 0;
         for (let chunk of chunks) {
             if (message == 0) {
-                await interaction.reply({ content: chunk, ephemeral: true });
+                await interaction.reply({ content: codeBlock(chunk), ephemeral: true });
             } else {
-                await interaction.followUp({ content: chunk, ephemeral: true });
+                await interaction.followUp({ content: codeBlock(chunk), ephemeral: true });
             }
             message++;
         }

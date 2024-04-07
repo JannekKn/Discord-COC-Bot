@@ -308,9 +308,10 @@ async function warOver(guildId, clanTag, notifyChannelId) {
 
       const attackPromise = new Promise((resolve, reject) => {
         db.query(
-          "INSERT INTO clanwars (clanTag, guildID, warStartDay, opponentTag, opponentName, won, teamSize, clanUsedAttacks, opponentUsedAttacks, clanStars, opponentStars, clanPercentage, opponentPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO clanwars (clanTag, isLeague, guildID, warStartDay, opponentTag, opponentName, won, teamSize, clanUsedAttacks, opponentUsedAttacks, clanStars, opponentStars, clanPercentage, opponentPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             clanTag,
+            false,
             guildId,
             warstartTimeSQL,
             war.opponent.tag,
