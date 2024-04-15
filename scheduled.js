@@ -12,7 +12,7 @@ const util = require('util');
 // node native promisify
 const query = util.promisify(db.query).bind(db);
 //discord button builder
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, ApplicationCommandPermissionType, EmbedBuilder } = require('discord.js');
 
 module.exports = {
   start
@@ -23,6 +23,7 @@ const moment = require('moment');
 const clan = require('./commands/clan.js');
 
 const dcWarSchedduled = []
+const dcLeagueSchedduled = []
 
 let client;
 async function start(dc) {
@@ -31,7 +32,326 @@ async function start(dc) {
   //capitalWeekendRaid();
   cron.schedule('0 0 * * *', warRequest);
   cron.schedule('0 12 * * *', warRequest);
+  cron.schedule('0 15 * * *', clanWarLeagueCheck);
   warRequest();
+  clanWarLeagueCheck();
+}
+
+async function clanWarLeagueCheck() {
+  const allServers = await query('SELECT * FROM guildToClan WHERE notifyChannelId IS NOT NULL;');
+
+  if (allServers && allServers.length) {
+    for (let item of allServers) {
+      const clantag = item.clanTag;
+      const guildID = item.guildID;
+
+      //check if not already schedduled
+      if (!dcLeagueSchedduled.includes(guildID)) {
+        await axios.get(cocApiDomain + '/v1/clans/' + pre.routConvert(clantag) + '/currentwar/leaguegroup', config)
+          .then(async function (response) {
+
+            //Check if all tags are there
+            let rounds = response.data.rounds;
+            let season = response.data.season;
+            let lastRound = rounds[rounds.length - 1];
+            if (lastRound.warTags[0] == "#0") {
+              console.log("last WarTag of CWL is still #0, waiting...");
+            }
+            else {
+              //If all the WarTags are there, take the last war and see when it ends
+              await axios.get(cocApiDomain + '/v1/clanwarleagues/wars/' + pre.routConvert(lastRound.warTags[0]), config)
+                .then(async function (warResponse) {
+                  if (warResponse.data.state == "warEnded") {
+                    //if war is ended, save now, this case should not be possible but idk
+                    console.log("war of CWL is already ended, this should not be possible but yeah... triggering end NOW");
+                    await clanWarLeagueEnd(guildID, clantag, item.notifyChannelId, rounds, season);
+                  }
+                  else {
+                    const endingWarTime = moment.utc(warResponse.data.endTime, 'YYYYMMDDTHHmmss.SSS[Z]');
+                    const apiCallTime = endingWarTime.add(11, 'seconds');
+
+                    scheduleLeagueExecution(apiCallTime, guildID, clantag, item.notifyChannelId, rounds, season);
+
+                  }
+                })
+                .catch(function (error) {
+                  throw error;
+                });
+
+            }
+
+          })
+          .catch(function (error) {
+            if (error.response.status == 404 && error.response.data.reason == "notFound") {
+              console.error("clan not in CWL");
+            }
+            else {
+              throw error;
+            }
+          });
+      }
+    }
+  }
+}
+
+async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChannelId, rounds, season) {
+  const currentTime = moment.utc();
+  const timeDifferenceInMs = apiCallTime - currentTime;
+  if (timeDifferenceInMs >= -10000) {
+    console.log("The time difference was over -10seconds: " + timeDifferenceInMs)
+  } else {
+    dcLeagueSchedduled.push(guildID)
+
+    console.log("LeagueEnd schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
+
+    setTimeout(async () => {
+      await clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
+    }, timeDifferenceInMs);
+  }
+}
+
+async function clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season) {
+  var warIDs = [];
+  //Every round
+  for (let round of rounds) {
+    //check if all data is there, otherwise log error
+    for (let warTag of round.warTags) {
+      if (warTag == "#0") {
+        console.error("error: some warTag from CLW was still #0");
+        return;
+      }
+    }
+    //Every war in Round (just one of this is the correct clan though)
+    let warID = 0;
+    for (let warTag of round.warTags) {
+
+      await axios.get(cocApiDomain + '/v1/clanwarleagues/wars/' + pre.routConvert(warTag), config)
+        .then(async function (response) {
+          if (response.data.state == "warEnded") {
+            //searching for the correct clan
+            if (response.data.clan.tag == clantag) {
+              //console.log("True");
+              warID = await clanWarLeagueWarSave(response.data, response.data.clan, response.data.opponent, notifyChannelId, guildID);
+            }
+            else if (response.data.opponent.tag == clantag) {
+              //console.log("True");
+              warID = await clanWarLeagueWarSave(response.data, response.data.opponent, response.data.clan, notifyChannelId, guildID);
+            }
+            else {
+              //console.log("False");
+            }
+          }
+          else {
+            console.error("Some war has not ended, but it should have")
+          }
+        })
+        .catch(function (error) {
+          throw error;
+        });
+
+      if (warID != 0) {
+        //console.log("BREAK");
+        break; // Exit the loop if clan was found in a war of all the wars in thr group
+      }
+
+      //Wait between clanwarleague war request
+      await pre.delay(1500);
+    }
+
+    warIDs.push(warID);
+  }
+
+  await new Promise((resolve, reject) => {
+    db.query(
+      "INSERT INTO clanwarleagues (season, clanTag, guildID, warIDs) VALUES (?, ?, ?, ?)",
+      [
+        season,
+        clantag,
+        guildID,
+        JSON.stringify(warIDs)
+      ],
+      (err, result, fields) => {
+        if (err) reject(err);
+        resolve();
+      }
+    );
+  });
+
+  let postMessage = "CWL is over!\nThank you to everyone who attacked! :heart: :crossed_swords: \nThis was season " + season + "\n\n Data will be saved now :)";
+
+  const buttonsRow1 = new ActionRowBuilder();
+
+  let currentRow = buttonsRow1; // Start adding buttons to the first row
+
+  var newButton = new ButtonBuilder()
+    .setCustomId(`cwllog_all_` + season)
+    .setLabel('All')
+    .setStyle(ButtonStyle.Primary);
+
+  currentRow.addComponents(newButton);
+
+  let buttonCount = 1;
+  for (const id of warIDs) {
+    const newButton = new ButtonBuilder()
+      .setCustomId(`cwllog_${id}`)
+      .setLabel(`Day ${buttonCount}`)
+      .setStyle(ButtonStyle.Primary);
+
+    currentRow.addComponents(newButton);
+    buttonCount++;
+
+    // Check if we need to create a second row
+    if (buttonCount === 5) {
+      currentRow = new ActionRowBuilder();
+    }
+  }
+
+  // Only include buttonsRow2 if it has buttons
+  const components = [buttonsRow1];
+  if (currentRow.components.length > 0) {
+    components.push(currentRow);
+  }
+
+  // Send the message with all the action rows
+  const channel = await client.channels.fetch(notifyChannelId);
+  await channel.send({ content: postMessage, components });
+}
+
+
+async function clanWarLeagueWarSave(war, ourClan, opponentClan, notifyChannelId, guildId) {
+
+
+  const channel = await client.channels.fetch(notifyChannelId);
+
+  let startWarTime = moment.utc(war.startTime, 'YYYYMMDDTHHmmss.SSS[Z]');
+  let warstartTimeSQL = startWarTime.format('YYYY-MM-DD');
+
+  var won;
+  if (ourClan.stars == opponentClan.stars) {
+    if (ourClan.destructionPercentage > opponentClan.destructionPercentage) {
+      won = "true";
+    }
+    else if (ourClan.destructionPercentage < opponentClan.destructionPercentage) {
+      won = "false";
+    }
+    else {
+      won = "same score";
+    }
+  }
+  else if (ourClan.stars > opponentClan.stars) {
+    won = "true";
+  }
+  else if (ourClan.stars < opponentClan.stars) {
+    won = "false";
+  }
+  else {
+    won = "error";
+  }
+
+  function getOpponentMapPosition(opponentMembers, memberTag) {
+
+    for (const member of opponentMembers) {
+      if (member.tag === memberTag) {
+        return member.mapPosition;
+      }
+    }
+    return null;
+  }
+
+  function getOpponentName(opponentMembers, memberTag) {
+
+    for (const member of opponentMembers) {
+      if (member.tag === memberTag) {
+        return member.name;
+      }
+    }
+    return null;
+  }
+
+  function fillWithZeroIfNotAttacked(arr) {
+    if (arr.length === 1) {
+      return arr;
+    }
+    for (let i = arr.length; i < 1; i++) {
+      arr.push(0);
+    }
+
+    return arr;
+  }
+
+
+  const attackPromise = new Promise((resolve, reject) => {
+    db.query(
+      "INSERT INTO clanwars (clanTag, isLeague, guildID, warStartDay, opponentTag, opponentName, won, teamSize, clanUsedAttacks, opponentUsedAttacks, clanStars, opponentStars, clanPercentage, opponentPercentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        ourClan.tag,
+        true,
+        guildId,
+        warstartTimeSQL,
+        opponentClan.tag,
+        opponentClan.name,
+        won,
+        war.teamSize,
+        ourClan.attacks,
+        opponentClan.attacks,
+        ourClan.stars,
+        opponentClan.stars,
+        ourClan.destructionPercentage,
+        opponentClan.destructionPercentage
+      ],
+      (err, result, fields) => {
+        if (err) reject(err);
+        resolve(result.insertId);
+      }
+    );
+  });
+
+  const warId = await attackPromise;
+
+  for (let member of ourClan.members) {
+    var attackIDs = [];
+
+    if (member.hasOwnProperty('attacks')) {
+      for (const attack of member.attacks) {
+        const attackPrimise = new Promise((resolve, reject) => {
+          db.query(
+            "INSERT INTO clanwarattacks (defenderTag, defenderName, defenderPosition, stars, destructionPercentage) VALUES (?, ?, ?, ?, ?)",
+            [
+              attack.defenderTag,
+              getOpponentName(opponentClan.members, attack.defenderTag),
+              getOpponentMapPosition(opponentClan.members, attack.defenderTag),
+              attack.stars,
+              attack.destructionPercentage
+            ],
+            (err, result, fields) => {
+              if (err) reject(err);
+              resolve(result.insertId);
+            }
+          );
+        });
+
+        attackIDs.push(await attackPrimise);
+      }
+    }
+
+    //Fill with 0, when attack1 or attack2 is 0 that means "didnt attack"
+    attackIDs = fillWithZeroIfNotAttacked(attackIDs);
+
+    db.query(
+      "INSERT INTO clanwarleaguemembers (warId, memberTag, memberName, memberPosition, attack) VALUES (?, ?, ?, ?, ?)",
+      [
+        warId,
+        member.tag,
+        member.name,
+        member.mapPosition,
+        attackIDs[0]
+      ],
+      (err, result, fields) => {
+        if (err) throw (err);
+      }
+    );
+  }
+  return warId;
 }
 
 async function capitalWeekendRaid() {
@@ -89,7 +409,7 @@ async function capitalWeekendRaid() {
                 postChunks.push(i + ". " + name + " (" + attacks + "/" + possibleAttacks + " attacks, " + looted + " looted)\n");
 
                 //add to list for saving it later
-                membersListToSave.push({ tag: member.tag, knownName: name, attacked: true });
+                membersListToSave.push({ tag: member.tag, knownName: name, attacked: attacks });
                 i++;
               }
               //Find who didnt attack
@@ -105,7 +425,7 @@ async function capitalWeekendRaid() {
                   for (let notAttackingMember of notAttacking) {
                     postChunks.push(i + ". " + notAttackingMember.userName + " (" + notAttackingMember.userTag + ")\n");
                     //add to list for saving it later
-                    membersListToSave.push({ tag: notAttackingMember.userTag, knownName: notAttackingMember.userName, attacked: false });
+                    membersListToSave.push({ tag: notAttackingMember.userTag, knownName: notAttackingMember.userName, attacked: 0 });
 
                     i++;
                   }
@@ -154,10 +474,10 @@ async function capitalWeekendRaid() {
 
   //Delete everything thats older than specified weeks
 
-  db.query("DELETE FROM capitalRaids WHERE timeAdded < DATE_SUB(NOW(), INTERVAL " + weeksToSaveCapitalRaids + " WEEK);",
+  /*db.query("DELETE FROM capitalRaids WHERE timeAdded < DATE_SUB(NOW(), INTERVAL " + weeksToSaveCapitalRaids + " WEEK);",
     function (err, result, fields) {
       if (err) throw err;
-    });
+    });*/
 }
 
 
@@ -224,15 +544,22 @@ async function warOver(guildId, clanTag, notifyChannelId) {
         won = "error";
       }
 
-      postChunks.push("Clanwar is over!\nThank you to everyone who attacked! :heart: :crossed_swords: \n")
-      postChunks.push(startedAt + " - " + endedAt);
-      postChunks.push("\nWon: " + won);
-      postChunks.push("\nWar size: " + war.teamSize + "v" + war.teamSize);
-      postChunks.push("\nUsed attacks: " + war.clan.attacks + " - " + war.opponent.attacks);
-      postChunks.push("\nStars: " + war.clan.stars + " - " + war.opponent.stars);
-      postChunks.push("\nPercentage destroyed: " + war.clan.destructionPercentage + " - " + war.opponent.destructionPercentage);
+      let postMessage = "Clanwar is over!\nThank you to everyone who attacked! :heart: :crossed_swords:";
 
-      postChunks.push("\n\nThis war and who attacked will now save to the database :)");
+      const warInfo = new EmbedBuilder()
+        .setColor(0x0099FF)
+        .setTitle("War info")
+        .setDescription(startedAt?.toString() + " - " + endedAt?.toString())
+        .addFields(
+          { name: 'Won', value: won },
+          { name: 'War size', value: (war.teamSize?.toString() || "N/A") },
+          { name: 'Attacks used', value: `${war.clan?.attacks || "N/A"} - ${war.opponent?.attacks || "N/A"}` },
+          { name: 'Stars', value: `${war.clan?.stars || "N/A"} - ${war.opponent?.stars || "N/A"}` },
+          { name: 'Percentage destroyed', value: `${war.clan?.destructionPercentage || "N/A"} - ${war.opponent?.destructionPercentage || "N/A"}` },
+        )
+        
+        .setTimestamp()
+        .setFooter({ text: 'This will be saved now :)' });
 
       const warLogButton = new ButtonBuilder()
         .setCustomId('warlog_' + warstartTimeSQL)
@@ -242,34 +569,7 @@ async function warOver(guildId, clanTag, notifyChannelId) {
       const buttons = new ActionRowBuilder()
         .addComponents(warLogButton);
 
-      const chunks = [];
-      const maxLength = 1999;
-      let currentChunk = '';
-      postChunks.forEach(line => {
-        if ((currentChunk + line).length <= maxLength) {
-          currentChunk += line;
-        } else {
-          chunks.push(currentChunk.trim());
-          currentChunk = line;
-        }
-      });
-
-      if (currentChunk.length > 0) {
-        chunks.push(currentChunk.trim());
-      }
-
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-
-
-        // Check if it's the last iteration
-        if (i === chunks.length - 1) {
-          await channel.send({ content: chunk, components: [buttons] });
-        }
-        else {
-          await channel.send({ content: chunk });
-        }
-      }
+      await channel.send({ content: postMessage, embeds: [warInfo], components: [buttons] });
 
       function getOpponentMapPosition(clanWarData, memberTag) {
         const opponentMembers = clanWarData.opponent.members;

@@ -4,7 +4,7 @@ const util = require('util');
 const query = util.promisify(db.query).bind(db);
 //Axios for requests
 const axios = require('axios');
-const moment = require('moment'); 
+const moment = require('moment');
 //Coc api Token and domain values
 const { cocApiToken, cocApiDomain } = require('../config.json');
 const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
@@ -12,6 +12,8 @@ const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
 module.exports = {
     autoCompleteUsers,
     routConvert,
+    autoCompleteCWLSeasons,
+    autoCompleteCWLDay,
     updateClanMembers,
     delay,
     autoCompleteWarDates
@@ -23,7 +25,7 @@ function delay(time) {
 
 async function autoCompleteUsers(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    const users = await query("SELECT userName FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + " FETCH FIRST 25 ROWS ONLY;");
+    const users = await query("SELECT userName, userTag FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + " FETCH FIRST 25 ROWS ONLY;");
 
     //Put all users into Array
     let userArray = [];
@@ -41,7 +43,7 @@ async function autoCompleteUsers(interaction, guildId, value) {
 
 async function autoCompleteWarDates(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE isLeague = 0 guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
+    const result = await query("SELECT DISTINCT warStartDay FROM clanwars WHERE isLeague = 0 AND guildId = " + db.escape(guildId) + " AND warStartDay LIKE " + userinput + " ORDER BY warStartDay DESC FETCH FIRST 25 ROWS ONLY;");
     //Put all users into Array
     let array = [];
     for (let item of result) {
@@ -57,6 +59,56 @@ async function autoCompleteWarDates(interaction, guildId, value) {
     }
 }
 
+async function autoCompleteCWLSeasons(interaction, guildId, value) {
+    var userinput = db.escape('%' + value + '%');
+    const result = await query("SELECT season FROM clanwarleagues WHERE guildId = " + db.escape(guildId) + " AND season LIKE " + userinput + " ORDER BY season DESC FETCH FIRST 25 ROWS ONLY;");
+    //Put all users into Array
+    let array = [];
+    for (let item of result) {
+        array.push(item.season);
+    }
+
+    //If there are more than 25 options, do nothing, becuase discord is stupid
+    if (array.length <= 25) {
+        await interaction.respond(
+            array.map(choice => ({ name: choice, value: choice })),
+        );
+    }
+}
+
+async function autoCompleteCWLDay(interaction, guildId, value) {
+
+    let season = interaction.options._hoistedOptions[0].value;
+
+    let suggestions = [];
+
+
+    if (season == null) {
+        await interaction.respond(suggestions);
+        return;
+    }
+
+    var seasoninput = db.escape('%' + season + '%');
+    const result = await query("SELECT warIDs FROM clanwarleagues WHERE guildId = " + db.escape(guildId) + " AND season LIKE " + seasoninput + " ORDER BY season DESC FETCH FIRST 1 ROWS ONLY;");
+
+    let warIDArray = [];
+
+    if (result && result.length) {
+        
+        warIDArray = JSON.parse(result[0].warIDs);
+    }
+    
+    // If there are more than 25 options, do nothing (limitation)
+    if (warIDArray.length <= 25) {
+        for (let i = 0; i < warIDArray.length; i++) {
+            const warID = warIDArray[i];
+            suggestions.push({ name: `${i + 1}`, value: warID.toString() });
+        }
+
+        await interaction.respond(suggestions);
+    }
+}
+
 function routConvert(stringWithRout) {
     return stringWithRout.replace("#", "%23");
 }
@@ -67,9 +119,6 @@ async function updateClanMembers(interaction) {
     const rows = await query('SELECT clanTag FROM guildToClan WHERE guildID = ' + interaction.guildId);
     if (rows && rows.length) {
         const clantag = rows[0].clanTag;
-
-        //Array where all clan Tags get added
-        var userTags = [];
 
         //get clan members info
         await axios.get(cocApiDomain + '/v1/clans/' + routConvert(clantag) + '/members', config)
@@ -126,6 +175,6 @@ async function updateClanMembers(interaction) {
             });
 
     } else {
-        console.log("ERROR UPDATING")
+        console.error("ERROR UPDATING")
     }
 }

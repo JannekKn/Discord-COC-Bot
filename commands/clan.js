@@ -10,6 +10,7 @@ var db = require('../db');
 const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
 //imports premade functions 
 const pre = require("../preset/premade.js");
+const of = require("../preset/otherfunctions.js");
 const util = require('util');
 // node native promisify
 const query = util.promisify(db.query).bind(db);
@@ -31,8 +32,40 @@ module.exports = {
 				.setDescription('view your clan manually'))
 		.addSubcommand(subcommand =>
 			subcommand
+				.setName('cwl-log')
+				.setDescription('view the clans specific CWL log')
+				.addStringOption(option =>
+					option.setName('season')
+						.setDescription('CWL season by month and year')
+						.setAutocomplete(true)
+						.setRequired(true))
+				.addStringOption(option =>
+					option.setName('day')
+						.setDescription('warday of the cwl')
+						.setAutocomplete(true)))
+		.addSubcommand(subcommand =>
+			subcommand
 				.setName('capital-raids')
 				.setDescription('view who attacks in capital raids and who does not')),
+
+	async autocomplete(interaction) {
+		const focusedOption = interaction.options.getFocused(true);
+		const optionName = focusedOption.name;
+		console.log(optionName)
+		if (optionName === 'season') {
+			await pre.autoCompleteCWLSeasons(interaction, interaction.guildId, interaction.options.getFocused());
+			console.log("season")
+		}
+		else if (optionName === 'day') {
+			await pre.autoCompleteCWLDay(interaction, interaction.guildId, interaction.options.getFocused());
+			console.log(interaction.options)
+			console.log("day")
+		}
+		else {
+			console.log("nothing")
+		}
+
+	},
 
 	async execute(interaction) {
 		if (interaction.options.getSubcommand() === 'update') {
@@ -115,8 +148,21 @@ module.exports = {
 
 		}
 
+		else if (interaction.options.getSubcommand() === 'cwl-log') {
+			if(await interaction.options.getString('day') == null) {
+				const season = interaction.options.getString('season');
+				of.cwlLog(interaction, season);
+			}
+			else {
+				const season = interaction.options.getString('season');
+				const warId = interaction.options.getString('day');
+				of.cwlLogDay(interaction, warId);
+			}
+			
+		}
+
 		else if (interaction.options.getSubcommand() === 'capital-raids') {
-			await interaction.deferReply({ephemeral: true});
+			await interaction.deferReply({ ephemeral: true });
 			await interaction.editReply({ content: ":arrows_clockwise: Updating... ", ephemeral: true });
 			await pre.updateClanMembers(interaction);
 
@@ -125,15 +171,15 @@ module.exports = {
 
 				let clanTag = clan[0].clanTag;
 
-				const attacks = await query('SELECT memberTag, memberName, SUM(CASE WHEN attacked = 1 THEN 1 ELSE 0 END) AS actualAttacks, COUNT(*) AS possibleAttacks, ROUND((SUM(CASE WHEN attacked = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(*)) AS percentage FROM capitalRaids WHERE clanTag = ' + db.escape(clanTag) + ' AND guildID = ' + db.escape(interaction.guildId) + ' GROUP BY memberTag, memberName ORDER BY percentage DESC, memberName ');
+				const attacks = await query('SELECT memberTag, memberName, SUM(attacked) AS actualAttacks, (COUNT(*) * 6) AS possibleAttacks, ROUND((SUM(attacked) * 100.0) / (COUNT(*) * 6)) AS percentage FROM capitalRaids WHERE clanTag = ' + db.escape(clanTag) + ' AND guildID = ' + db.escape(interaction.guildId) + ' GROUP BY memberTag, memberName ORDER BY percentage DESC, memberName ');
 
 				if (attacks && attacks.length) {
 					var membersString = ":thinking: Here is your list of how often people attack in the last capital raids: \n"
-                    membersString += "```";
-                    for (let item of attacks) {
-                        membersString += item.percentage + "% (" + item.actualAttacks + "/" + item.possibleAttacks + ") " + item.memberName + " (" + item.memberTag + ")\n";
-                    }
-                    membersString += "```";
+					membersString += "```";
+					for (let item of attacks) {
+						membersString += item.percentage + "% (" + item.actualAttacks + "/" + item.possibleAttacks + ") " + item.memberName + " (" + item.memberTag + ")\n";
+					}
+					membersString += "```";
 					await interaction.editReply({ content: membersString, ephemeral: true });
 
 				} else {

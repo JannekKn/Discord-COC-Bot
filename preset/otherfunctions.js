@@ -12,7 +12,9 @@ const { cocApiToken, cocApiDomain } = require('../config.json');
 const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
 
 module.exports = {
-    warLog
+    warLog,
+    cwlLog,
+    cwlLogDay
 }
 
 async function warLog(interaction, warDayStartDate) {
@@ -21,7 +23,7 @@ async function warLog(interaction, warDayStartDate) {
     //older VPCCPORO
 
     //get war
-    const resultsWars = await query("SELECT * FROM clanwars WHERE isLeague = 0 guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
+    const resultsWars = await query("SELECT * FROM clanwars WHERE isLeague = 0 AND guildId = " + interaction.guildId + " AND warStartDay = " + db.escape(warDayStartDate) + ";");
 
     if (resultsWars && resultsWars.length) {
 
@@ -90,7 +92,7 @@ async function warLog(interaction, warDayStartDate) {
         }
 
         const chunks = [];
-        const maxLength = 1999;
+        const maxLength = 1900;
         let currentChunk = '';
         postChunks.forEach(line => {
             if ((currentChunk + line).length <= maxLength) {
@@ -118,5 +120,213 @@ async function warLog(interaction, warDayStartDate) {
 
     } else {
         await interaction.reply({ content: ":x: That warday does not exist!", ephemeral: true });
+    }
+}
+
+
+
+
+async function cwlLog(interaction, season) {
+    //get league
+    const resultsLeague = await query("SELECT * FROM clanwarleagues WHERE guildId = " + interaction.guildId + " AND season = " + db.escape(season) + ";");
+    if (resultsLeague && resultsLeague.length) {
+        let league = resultsLeague[0];
+        console.log(league)
+        let warIDS = JSON.parse(league.warIDs)
+
+        let postChunks = [];
+
+        postChunks.push("👩‍💻🖨️ ClanWarLeague from Season " + league.season);
+
+        var warNum = 1;
+        for (let warID of warIDS) {
+            //get wars
+            const resultsWar = await query("SELECT * FROM clanwars WHERE isLeague = 1 AND warId = " + db.escape(warID) + " AND guildId = " + interaction.guildId + ";");
+            if (resultsWar && resultsWar.length) {
+                const war = resultsWar[0];
+                //get members of clw war
+                var resultsWarMembers = await query("SELECT * FROM clanwarleaguemembers WHERE warId = " + db.escape(war.warId) + ";");
+
+                if (warNum == 1) {
+                    postChunks.push("\nLeague size: " + war.teamSize + "v" + war.teamSize);
+                    postChunks.push("\n\n" + war.warStartDay + " against: " + war.opponentName + "(" + war.opponentTag + ")");
+                } else {
+                    postChunks.push("!!!FORCE_NEW_CHUNK!!!");
+                    postChunks.push(war.warStartDay + " against: " + war.opponentName + "(" + war.opponentTag + ")");
+                }
+
+
+                postChunks.push("\nWon: " + war.won);
+                postChunks.push("\nUsed attacks: " + war.clanUsedAttacks + "v" + war.opponentUsedAttacks);
+                postChunks.push("\nStars: " + war.clanStars + "v" + war.opponentStars);
+                postChunks.push("\nPercentage destroyed: " + war.clanPercentage + "v" + war.opponentPercentage + "\n");
+
+                resultsWarMembers.sort((a, b) => a.memberPosition - b.memberPosition);
+
+                for (let member of resultsWarMembers) {
+
+                    //console.log(member)
+
+                    //how many attacks did member do
+                    let attackCount = 0;
+                    if (member.attack != 0) { attackCount++ }
+
+                    //show member in discord Message
+                    var emote;
+                    if (attackCount == 1) {
+                        emote = " ✅ ";
+                    }
+                    else {
+                        emote = " ❌ ";
+                    }
+                    postChunks.push("\n" + member.memberPosition + "." + emote + member.memberName);
+
+                    if (member.attack != 0) {
+                        let resultsAttack = await query("SELECT * FROM clanwarattacks WHERE attackID = " + db.escape(member.attack) + ";");
+                        let attack = resultsAttack[0];
+
+                        let starEmoji = "";
+                        for (let i = 0; i < attack.stars; i++) {
+                            starEmoji += "⭐";
+                        }
+                        postChunks.push("\n - Attack: " + starEmoji + " (" + attack.destructionPercentage + "%) on #" + + attack.defenderPosition);
+                    }
+                }
+
+            }
+            else {
+                console.error("Something went wrong, theres not a warID that is given in the season... warID:" + warID)
+            }
+            warNum++;
+        }
+
+        const chunks = [];
+        const maxLength = 1900;
+        let currentChunk = '';
+        const forceNewChunkMarker = "!!!FORCE_NEW_CHUNK!!!"; // Unique, unlikely content
+
+        postChunks.forEach(line => {
+            if ((currentChunk + line).length <= maxLength && !line.includes(forceNewChunkMarker)) {
+                currentChunk += line;
+            } else {
+                chunks.push(currentChunk.trim());
+                currentChunk = line.includes(forceNewChunkMarker) ? '' : line; // Reset chunk only if marker not found
+            }
+        });
+
+        // Handle remaining chunk (if any)
+        if (currentChunk.length > 0) {
+            chunks.push(currentChunk.trim());
+        }
+
+        let message = 0;
+        for (const chunk of chunks) {
+            if (message === 0) {
+                console.log("replied");
+                await interaction.reply({ content: codeBlock(chunk), ephemeral: true });
+            } else {
+                console.log("followup");
+                await interaction.followUp({ content: codeBlock(chunk), ephemeral: true });
+            }
+            message++;
+        }
+
+    } else {
+        await interaction.reply({ content: ":x: That cwl does not exist!", ephemeral: true });
+    }
+
+
+}
+
+
+
+
+async function cwlLogDay(interaction, warID) {
+
+    let postChunks = [];
+
+    postChunks.push("👩‍💻🖨️ ClanWarLeague stats for given day:");
+
+
+    const resultsWar = await query("SELECT * FROM clanwars WHERE isLeague = 1 AND warId = " + db.escape(warID) + " AND guildId = " + interaction.guildId + ";");
+    if (resultsWar && resultsWar.length) {
+        const war = resultsWar[0];
+        //get members of clw war
+        var resultsWarMembers = await query("SELECT * FROM clanwarleaguemembers WHERE warId = " + db.escape(war.warId) + ";");
+
+        postChunks.push("\n\nLeague size: " + war.teamSize + "v" + war.teamSize);
+        postChunks.push("\n" + war.warStartDay + " against: " + war.opponentName + "(" + war.opponentTag + ")");
+        postChunks.push("\nWon: " + war.won);
+        postChunks.push("\nUsed attacks: " + war.clanUsedAttacks + "v" + war.opponentUsedAttacks);
+        postChunks.push("\nStars: " + war.clanStars + "v" + war.opponentStars);
+        postChunks.push("\nPercentage destroyed: " + war.clanPercentage + "v" + war.opponentPercentage + "\n");
+
+        resultsWarMembers.sort((a, b) => a.memberPosition - b.memberPosition);
+
+        for (let member of resultsWarMembers) {
+
+            //console.log(member)
+
+            //how many attacks did member do
+            let attackCount = 0;
+            if (member.attack != 0) { attackCount++ }
+
+            //show member in discord Message
+            var emote;
+            if (attackCount == 1) {
+                emote = " ✅ ";
+            }
+            else {
+                emote = " ❌ ";
+            }
+            postChunks.push("\n" + member.memberPosition + "." + emote + member.memberName);
+
+            if (member.attack != 0) {
+                let resultsAttack = await query("SELECT * FROM clanwarattacks WHERE attackID = " + db.escape(member.attack) + ";");
+                let attack = resultsAttack[0];
+
+                let starEmoji = "";
+                for (let i = 0; i < attack.stars; i++) {
+                    starEmoji += "⭐";
+                }
+                postChunks.push("\n - Attack: " + starEmoji + " (" + attack.destructionPercentage + "%) on #" + + attack.defenderPosition);
+            }
+        }
+
+    }
+    else {
+        console.error("Something went wrong, theres not a warID that is given in the season... warID:" + warID)
+    }
+
+
+    const chunks = [];
+    const maxLength = 1900;
+    let currentChunk = '';
+    const forceNewChunkMarker = "!!!FORCE_NEW_CHUNK!!!"; // Unique, unlikely content
+
+    postChunks.forEach(line => {
+        if ((currentChunk + line).length <= maxLength && !line.includes(forceNewChunkMarker)) {
+            currentChunk += line;
+        } else {
+            chunks.push(currentChunk.trim());
+            currentChunk = line.includes(forceNewChunkMarker) ? '' : line; // Reset chunk only if marker not found
+        }
+    });
+
+    // Handle remaining chunk (if any)
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk.trim());
+    }
+
+    let message = 0;
+    for (const chunk of chunks) {
+        if (message === 0) {
+            console.log("replied");
+            await interaction.reply({ content: codeBlock(chunk), ephemeral: true });
+        } else {
+            console.log("followup");
+            await interaction.followUp({ content: codeBlock(chunk), ephemeral: true });
+        }
+        message++;
     }
 }

@@ -80,6 +80,17 @@ client.on('interactionCreate', async interaction => {
 				const date = interaction.customId.split('_')[1];
 				of.warLog(interaction, date);
 			} 
+			else if (customcommand == "cwllog") {
+				const warId = interaction.customId.split('_')[1];
+				if(warId == "all") {
+					const season = interaction.customId.split('_')[2];
+					of.cwlLog(interaction, season);
+				}
+				else {
+					of.cwlLogDay(interaction, warId);
+				}
+				
+			}
 			//here possible other ones with underscore
 		}
 		else {
