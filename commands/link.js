@@ -10,6 +10,9 @@ var db = require('../db');
 const config = {headers: {Authorization: `Bearer ${cocApiToken}`}};
 //imports premade functions 
 const pre = require("../preset/premade.js");
+const util = require('util');
+// node native promisify
+const query = util.promisify(db.query).bind(db);
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -36,7 +39,7 @@ module.exports = {
 
 			if (result && result.length ) {
 				//guild has a clan connected already!
-				await interaction.reply("There is already a clan configured for this server! use /unlinkclan to unlink that one");
+				await interaction.reply("There is already a clan configured for this server! use /link remove to unlink that one");
 			} else {
 				//guild has no current clan - linking clan
 				//In database
