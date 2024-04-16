@@ -16,7 +16,8 @@ module.exports = {
     autoCompleteCWLDay,
     updateClanMembers,
     delay,
-    autoCompleteWarDates
+    autoCompleteWarDates,
+    updateSingleClanMember
 }
 
 function delay(time) {
@@ -25,20 +26,21 @@ function delay(time) {
 
 async function autoCompleteUsers(interaction, guildId, value) {
     var userinput = db.escape('%' + value + '%');
-    const users = await query("SELECT userName, userTag FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + " FETCH FIRST 25 ROWS ONLY;");
+    var users = await query("SELECT userName, userTag FROM users WHERE guildId = " + db.escape(guildId) + " AND userName LIKE " + userinput + " FETCH FIRST 25 ROWS ONLY;");
 
-    //Put all users into Array
-    let userArray = [];
-    for (let item of users) {
-        userArray.push(item.userName);
+    //just give max of 25 suggestions because of discord maximum
+    if (users.length > 25) {
+        let users = users.slice(0, 25);
     }
 
-    //If there are more than 25 options, do nothing, becuase discord is stupid
-    if (userArray.length <= 25) {
-        await interaction.respond(
-            userArray.map(choice => ({ name: choice, value: choice })),
-        );
+    let suggestions = [];
+    for (let i = 0; i < users.length; i++) {
+        const name = users[i].userName;
+        const tag = users[i].userTag;
+        suggestions.push({ name: `${name}`, value: `${tag}` });
     }
+
+    await interaction.respond(suggestions);
 }
 
 async function autoCompleteWarDates(interaction, guildId, value) {
@@ -94,10 +96,10 @@ async function autoCompleteCWLDay(interaction, guildId, value) {
     let warIDArray = [];
 
     if (result && result.length) {
-        
+
         warIDArray = JSON.parse(result[0].warIDs);
     }
-    
+
     // If there are more than 25 options, do nothing (limitation)
     if (warIDArray.length <= 25) {
         for (let i = 0; i < warIDArray.length; i++) {
@@ -176,5 +178,42 @@ async function updateClanMembers(interaction) {
 
     } else {
         console.error("ERROR UPDATING")
+    }
+}
+
+
+async function updateSingleClanMember(interaction, userTag) {
+
+    const clan = await query('SELECT clanTag FROM guildToClan WHERE guildID = ' + interaction.guildId);
+    if (clan && clan.length) {
+
+        let clanTag = clan[0].clanTag;
+
+        const userResponse = await axios.get(cocApiDomain + '/v1/players/' + routConvert(userTag), config);
+        //console.log(userResponse)
+        const tag = userResponse.data.tag;
+        const name = userResponse.data.name;
+        const role = userResponse.data.role;
+        const warPreference = userResponse.data.warPreference;
+        const userClanTag = userResponse.data.clan.tag;
+
+        if (userClanTag == clanTag) {
+            const attackPromise = new Promise((resolve, reject) => {
+                db.query("INSERT INTO users (guildId, userTag, userName, userRole, userWarPref) VALUES (" + db.escape(interaction.guildId) + ", " + db.escape(tag) + ", " + db.escape(name) + ", " + db.escape(role) + ", " + db.escape(warPreference) + ") ON DUPLICATE KEY UPDATE userName = " + db.escape(name) + ", userRole = " + db.escape(role) + ", userWarPref = " + db.escape(warPreference) + ";", function (err, result, fields) {
+                    if (err) reject(err);
+                    else resolve(tag);
+                });
+            });
+            const updatedTag = await attackPromise;
+            return;
+        }
+        else {
+            await interaction.editReply({ content: ":x: User is not in this clan anymore", ephemeral: true });
+            return;
+        }
+
+    } else {
+        await interaction.editReply({ content: ":x: That didnt work... do you have a clan linked to this Discord? (/link)", ephemeral: true });
+        return;
     }
 }
