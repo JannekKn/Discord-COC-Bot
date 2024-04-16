@@ -25,7 +25,7 @@ rest.put(Routes.applicationCommands(clientId), { body: [] })
 	.then(() => console.log('Successfully deleted all application commands.'))
 	.catch(console.error);
 
-    
+
 // deploy commands globally
 (async () => {
 	try {
@@ -34,19 +34,19 @@ rest.put(Routes.applicationCommands(clientId), { body: [] })
 		const data = await rest.put(
 			//this was for guild-based commands - i dont use that here, but could be used
 			//Routes.applicationGuildCommands(clientId, guildId), 
-			
+
 
 			//route for global commands
-            Routes.applicationCommands(clientId),
-            { body: commands },
-        );
+			Routes.applicationCommands(clientId),
+			{ body: commands },
+		);
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 
 	} catch (error) {
 		console.error(error);
 	} finally {
-        // This will ensure that the script ends after the asynchronous operations are completed
-        process.exit();
-    }
+		// This will ensure that the script ends after the asynchronous operations are completed
+		process.exit();
+	}
 })();

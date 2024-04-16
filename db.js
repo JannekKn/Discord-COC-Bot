@@ -9,7 +9,7 @@ var con = mysql.createConnection({
   port: dbPort
 });
 
-con.connect(function(err) {
+con.connect(function (err) {
   if (err) throw err;
   console.log("Connected to Databse!");
 });

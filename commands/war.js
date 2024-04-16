@@ -72,7 +72,7 @@ module.exports = {
 
         }
         else if (interaction.options.getSubcommand() === 'log') {
-            
+
             const warDayDate = interaction.options.getString('war-start-day');
             of.warLog(interaction, warDayDate);
         }

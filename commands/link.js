@@ -7,7 +7,7 @@ const { cocApiToken, cocApiDomain } = require('../config.json');
 //Database file
 var db = require('../db');
 //Config for api request
-const config = {headers: {Authorization: `Bearer ${cocApiToken}`}};
+const config = { headers: { Authorization: `Bearer ${cocApiToken}` } };
 //imports premade functions 
 const pre = require("../preset/premade.js");
 const util = require('util');
@@ -37,33 +37,33 @@ module.exports = {
 
 			const result = await query("SELECT clanTag FROM guildToClan WHERE guildID = " + interaction.guildId + ";");
 
-			if (result && result.length ) {
+			if (result && result.length) {
 				//guild has a clan connected already!
 				await interaction.reply("There is already a clan configured for this server! use /link remove to unlink that one");
 			} else {
 				//guild has no current clan - linking clan
 				//In database
-				db.query("INSERT INTO guildToClan (guildID, clanTag) VALUES ('"+ interaction.guildId +"', "+ db.escape(clantag) +")", function (err, result, fields) {
+				db.query("INSERT INTO guildToClan (guildID, clanTag) VALUES ('" + interaction.guildId + "', " + db.escape(clantag) + ")", function (err, result, fields) {
 					if (err) throw err;
 				});
 
 				//get clan info
-				axios.get( cocApiDomain + '/v1/clans/' + pre.routConvert(clantag), config)
-				.then( async function (response) {
-					const clanlinked = new EmbedBuilder()
-						.setColor(0x0099FF)
-						.setTitle(response.data.name + " (" + clantag + ")")
-						.setDescription("Clan successfully linked to this server")
-						.setThumbnail(response.data.badgeUrls.small)
+				axios.get(cocApiDomain + '/v1/clans/' + pre.routConvert(clantag), config)
+					.then(async function (response) {
+						const clanlinked = new EmbedBuilder()
+							.setColor(0x0099FF)
+							.setTitle(response.data.name + " (" + clantag + ")")
+							.setDescription("Clan successfully linked to this server")
+							.setThumbnail(response.data.badgeUrls.small)
 
-					await interaction.reply({ embeds: [clanlinked] });
+						await interaction.reply({ embeds: [clanlinked] });
 
-				})
-				.catch(function (error) {
-					throw error;
-				});
+					})
+					.catch(function (error) {
+						throw error;
+					});
 			}
-		} 
+		}
 		else if (interaction.options.getSubcommand() === 'remove') {
 			//remove link
 			await interaction.reply("You are on the way to remove the clan from this Discord Server. If you do this, everything you configured will be deleted! Is that what you want to do?");

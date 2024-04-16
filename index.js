@@ -76,20 +76,20 @@ client.on('interactionCreate', async interaction => {
 		//i use the underscore here to get variables through the button and execute the correct thing
 		if (interaction.customId.includes('_')) {
 			const customcommand = interaction.customId.split('_')[0];
-			if(customcommand == "warlog") {
+			if (customcommand == "warlog") {
 				const date = interaction.customId.split('_')[1];
 				of.warLog(interaction, date);
-			} 
+			}
 			else if (customcommand == "cwllog") {
 				const warId = interaction.customId.split('_')[1];
-				if(warId == "all") {
+				if (warId == "all") {
 					const season = interaction.customId.split('_')[2];
 					of.cwlLog(interaction, season);
 				}
 				else {
 					of.cwlLogDay(interaction, warId);
 				}
-				
+
 			}
 			//here possible other ones with underscore
 		}

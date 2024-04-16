@@ -10,56 +10,56 @@ module.exports = {
 			subcommand
 				.setName('builders-potion')
 				.setDescription('calculate time for use with the builders-potion')
-                /*.addIntegerOption(option =>
-                    option.setName('gems')
-                        .setDescription('how many gems does your upgrade cost to finish')
-                        .setRequired(true)))*/
+				/*.addIntegerOption(option =>
+					option.setName('gems')
+						.setDescription('how many gems does your upgrade cost to finish')
+						.setRequired(true)))*/
 				.addIntegerOption(option =>
 					option.setName('days')
 						.setDescription('how many gems does your upgrade cost to finish'))
-						//.setRequired(true))
+				//.setRequired(true))
 				.addIntegerOption(option =>
 					option.setName('hours')
 						.setDescription('hours left of ur upgrade'))
-						//.setRequired(true))
+				//.setRequired(true))
 				.addIntegerOption(option =>
 					option.setName('minutes')
 						.setDescription('minutes left of ur upgrade')))
-						//.setRequired(true)))
+		//.setRequired(true)))
 
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('clock-tower-potion')
 				.setDescription('calculate time for use with the clock-tower')
 				.addIntegerOption(option =>
-                    option.setName('days')
-                        .setDescription('how many gems does your upgrade cost to finish'))
-                        //.setRequired(true))
-                .addIntegerOption(option =>
-                    option.setName('hours')
-                        .setDescription('hours left of ur upgrade'))
-                        //.setRequired(true))
-                .addIntegerOption(option =>
-                    option.setName('minutes')
-                        .setDescription('minutes left of ur upgrade')))
-                        //.setRequired(true)))
+					option.setName('days')
+						.setDescription('how many gems does your upgrade cost to finish'))
+				//.setRequired(true))
+				.addIntegerOption(option =>
+					option.setName('hours')
+						.setDescription('hours left of ur upgrade'))
+				//.setRequired(true))
+				.addIntegerOption(option =>
+					option.setName('minutes')
+						.setDescription('minutes left of ur upgrade')))
+		//.setRequired(true)))
 
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('lab-potion')
 				.setDescription('calculate time for use with the lab-potion')
 				.addIntegerOption(option =>
-                    option.setName('days')
-                        .setDescription('how many gems does your upgrade cost to finish'))
-                        //.setRequired(true))
-                .addIntegerOption(option =>
-                    option.setName('hours')
-                        .setDescription('hours left of ur upgrade'))
-                        //.setRequired(true))
-                .addIntegerOption(option =>
-                    option.setName('minutes')
-                        .setDescription('minutes left of ur upgrade'))),
-                        //.setRequired(true))),
+					option.setName('days')
+						.setDescription('how many gems does your upgrade cost to finish'))
+				//.setRequired(true))
+				.addIntegerOption(option =>
+					option.setName('hours')
+						.setDescription('hours left of ur upgrade'))
+				//.setRequired(true))
+				.addIntegerOption(option =>
+					option.setName('minutes')
+						.setDescription('minutes left of ur upgrade'))),
+	//.setRequired(true))),
 
 	async execute(interaction) {
 		//gems to time calculator
@@ -86,75 +86,75 @@ module.exports = {
 		console.log(time);*/
 
 		days = interaction.options.getInteger('days');
-		if(days == "") {days = 0;}
+		if (days == "") { days = 0; }
 		hours = interaction.options.getInteger('hours');
-		if(hours == "") {hours = 0;}
+		if (hours == "") { hours = 0; }
 		mins = interaction.options.getInteger('minutes');
-		if(mins == "") {mins = 0;}
+		if (mins == "") { mins = 0; }
 
 		var time = (days * 24 * 60) + (hours * 60) + mins;
 
 		if (interaction.options.getSubcommand() === 'builders-potion') {
-            if(time >= 600) {
-                time = time - 540;
+			if (time >= 600) {
+				time = time - 540;
 
-                days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
 
-                await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true}); 
-            }
-            else  {
-                time = time * 0.1;
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
+			else {
+				time = time * 0.1;
 
-				days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
 
-				await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true});
-            }
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
 		}
 
 		else if (interaction.options.getSubcommand() === 'clock-tower-potion') {
-			if(time >= 300) {
-                time = time - 270;
+			if (time >= 300) {
+				time = time - 270;
 
-                days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
 
-                await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true}); 
-            }
-            else  {
-                time = time * 0.1;
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
+			else {
+				time = time * 0.1;
 
-				days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
-				
-				await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true});
-            }
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
+
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
 		}
 
 		else if (interaction.options.getSubcommand() === 'lab-potion') {
-			if(time >= 1440) {
-                time = time - 1380;
+			if (time >= 1440) {
+				time = time - 1380;
 
-                days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
 
-                await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true}); 
-            }
-            else  {
-                time = time / 24;
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
+			else {
+				time = time / 24;
 
-				days = Math.floor (time/1440);
-                hours = Math.floor ( (time%1440)/60);
-                minutes = (time%1440)%60;
-				
-				await interaction.reply({content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true});
-            }
+				days = Math.floor(time / 1440);
+				hours = Math.floor((time % 1440) / 60);
+				minutes = (time % 1440) % 60;
+
+				await interaction.reply({ content: "Time left: " + bold(days + " days " + hours + " hours " + minutes + " minutes"), ephemeral: true });
+			}
 		}
 
 	},

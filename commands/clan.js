@@ -149,7 +149,7 @@ module.exports = {
 		}
 
 		else if (interaction.options.getSubcommand() === 'cwl-log') {
-			if(await interaction.options.getString('day') == null) {
+			if (await interaction.options.getString('day') == null) {
 				const season = interaction.options.getString('season');
 				of.cwlLog(interaction, season);
 			}
@@ -158,7 +158,7 @@ module.exports = {
 				const warId = interaction.options.getString('day');
 				of.cwlLogDay(interaction, warId);
 			}
-			
+
 		}
 
 		else if (interaction.options.getSubcommand() === 'capital-raids') {

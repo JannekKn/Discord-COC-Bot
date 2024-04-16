@@ -557,7 +557,7 @@ async function warOver(guildId, clanTag, notifyChannelId) {
           { name: 'Stars', value: `${war.clan?.stars || "N/A"} - ${war.opponent?.stars || "N/A"}` },
           { name: 'Percentage destroyed', value: `${war.clan?.destructionPercentage || "N/A"} - ${war.opponent?.destructionPercentage || "N/A"}` },
         )
-        
+
         .setTimestamp()
         .setFooter({ text: 'This will be saved now :)' });
 
