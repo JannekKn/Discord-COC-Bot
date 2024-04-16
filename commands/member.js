@@ -148,8 +148,8 @@ module.exports = {
 		else if (interaction.options.getSubcommand() === 'info') {
 			const tag = interaction.options.getString('member');
 
-			await interaction.deferReply();
-			await interaction.editReply(':arrows_clockwise: Updating... ');
+			await interaction.deferReply({ ephemeral: true });
+			await interaction.editReply({ content: ':arrows_clockwise: Updating... ', ephemeral: true });
 			await pre.updateSingleClanMember(interaction, tag);
 
 
