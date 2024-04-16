@@ -7,7 +7,7 @@
 - [ ] Provide Database Layout
 - [ ] Write Readme
 - [ ] Consistant discord response ephemeral - or setting
-- [ ] Add Clanwars features
+- [x] Add Clanwars features
 - [ ] Add Info/Settings command for Notification channels etc
 - [ ] Add Clangames feature?
 - [ ] Auto update commands on startup
