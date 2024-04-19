@@ -105,6 +105,14 @@ async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChan
     console.log("LeagueEnd schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
 
     setTimeout(async () => {
+      //remove from array
+      const index = dcLeagueSchedduled.indexOf(guildID);
+      if (index > -1) {
+        dcLeagueSchedduled.splice(index, 1);
+      } else {
+        console.error("war: Something went wrong, guildid was not found in array but schedduled")
+      }
+
       await clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
     }, timeDifferenceInMs);
   }
@@ -494,6 +502,14 @@ async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannel
     console.log("War schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
 
     setTimeout(async () => {
+      //remove from array
+      const index = dcWarSchedduled.indexOf(guildID);
+      if (index > -1) {
+        dcWarSchedduled.splice(index, 1);
+      } else {
+        console.error("war: Something went wrong, guildid was not found in array but schedduled")
+      }
+
       await warOver(guildID, clantag, notifyChannelId);
     }, timeDifferenceInMs); //1
   }
