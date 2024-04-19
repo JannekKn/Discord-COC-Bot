@@ -110,7 +110,7 @@ async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChan
       if (index > -1) {
         dcLeagueSchedduled.splice(index, 1);
       } else {
-        console.error("war: Something went wrong, guildid was not found in array but schedduled")
+        console.error("league: Something went wrong, guildid was not found in array but schedduled")
       }
 
       await clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
