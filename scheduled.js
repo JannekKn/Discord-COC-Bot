@@ -98,14 +98,16 @@ async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChan
   const currentTime = moment.utc();
   const timeDifferenceInMs = apiCallTime - currentTime;
   if (timeDifferenceInMs >= -10000) {
-    console.log("The time difference was over -10seconds: " + timeDifferenceInMs)
+    console.log("The time difference was over -10seconds: " + timeDifferenceInMs);
   } else {
     dcLeagueSchedduled.push(guildID)
 
     console.log("LeagueEnd schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
+    const delayInMinutes = Math.ceil(Math.abs(timeDifferenceInMs) / (1000 * 60));
+    const cronExpression = `0 */${delayInMinutes} * * *`;
 
-    setTimeout(async () => {
-      //remove from array
+    const scheduledJob = cron.schedule(cronExpression, async () => {
+      // Remove guildID from arraY
       const index = dcLeagueSchedduled.indexOf(guildID);
       if (index > -1) {
         dcLeagueSchedduled.splice(index, 1);
@@ -114,7 +116,8 @@ async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChan
       }
 
       await clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
-    }, timeDifferenceInMs);
+    });
+    scheduledJob.start();
   }
 }
 
@@ -495,13 +498,16 @@ async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannel
   const currentTime = moment.utc();
   const timeDifferenceInMs = apiCallTime - currentTime;
   if (timeDifferenceInMs <= 10000) {
-    console.log("The time difference was under 10seconds: " + timeDifferenceInMs)
+    console.log("The time difference was under 10seconds: " + timeDifferenceInMs);
   } else {
     dcWarSchedduled.push(guildID)
 
     console.log("War schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
 
-    setTimeout(async () => {
+    const delayInMinutes = Math.floor(timeDifferenceInMs / (1000 * 60));
+    const cronExpression = `0 */${delayInMinutes} * * *`;
+
+    const scheduledJob = cron.schedule(cronExpression, async () => {
       //remove from array
       const index = dcWarSchedduled.indexOf(guildID);
       if (index > -1) {
@@ -511,7 +517,8 @@ async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannel
       }
 
       await warOver(guildID, clantag, notifyChannelId);
-    }, timeDifferenceInMs); //1
+    });
+    scheduledJob.start();
   }
 }
 
