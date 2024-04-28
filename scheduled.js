@@ -19,11 +19,13 @@ module.exports = {
 };
 
 const cron = require('node-cron');
-const moment = require('moment');
+const schedule = require('node-schedule');
 const clan = require('./commands/clan.js');
+const moment = require('moment-timezone')
 
 const dcWarSchedduled = []
 const dcLeagueSchedduled = []
+const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 let client;
 async function start(dc) {
@@ -68,7 +70,7 @@ async function clanWarLeagueCheck() {
                   }
                   else {
                     const endingWarTime = moment.utc(warResponse.data.endTime, 'YYYYMMDDTHHmmss.SSS[Z]');
-                    const apiCallTime = endingWarTime.add(11, 'seconds');
+                    const apiCallTime = moment.utc(endingWarTime).add(1, 'minute').startOf('minute');
 
                     scheduleLeagueExecution(apiCallTime, guildID, clantag, item.notifyChannelId, rounds, season);
 
@@ -95,30 +97,30 @@ async function clanWarLeagueCheck() {
 }
 
 async function scheduleLeagueExecution(apiCallTime, guildID, clantag, notifyChannelId, rounds, season) {
-  const currentTime = moment.utc();
-  const timeDifferenceInMs = apiCallTime - currentTime;
-  if (timeDifferenceInMs >= -10000) {
-    console.log("The time difference was over -10seconds: " + timeDifferenceInMs);
-  } else {
-    dcLeagueSchedduled.push(guildID)
+  const localEndingWarTime = apiCallTime.tz(localTimeZone);
 
-    console.log("LeagueEnd schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
-    const delayInMinutes = Math.ceil(Math.abs(timeDifferenceInMs) / (1000 * 60));
-    const cronExpression = `0 */${delayInMinutes} * * *`;
+  const minute = localEndingWarTime.minute();
+  const hour = localEndingWarTime.hour();
+  const dayOfMonth = localEndingWarTime.date();
+  const month = localEndingWarTime.month();
+  const scheduleString = `${minute} ${hour} ${dayOfMonth} ${month + 1} *`;
 
-    const scheduledJob = cron.schedule(cronExpression, async () => {
-      // Remove guildID from arraY
-      const index = dcLeagueSchedduled.indexOf(guildID);
-      if (index > -1) {
-        dcLeagueSchedduled.splice(index, 1);
-      } else {
-        console.error("league: Something went wrong, guildid was not found in array but schedduled")
-      }
+  dcLeagueSchedduled.push(guildID)
 
-      await clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
-    });
-    scheduledJob.start();
-  }
+  console.log("LeagueEnd schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " at " + localEndingWarTime.toString());
+
+  const job = schedule.scheduleJob(scheduleString, () => {
+    // Remove guildID from arraY
+    const index = dcLeagueSchedduled.indexOf(guildID);
+    if (index > -1) {
+      dcLeagueSchedduled.splice(index, 1);
+    } else {
+      console.error("league: Something went wrong, guildid was not found in array but scheduled")
+    }
+
+    clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season);
+  });
+
 }
 
 async function clanWarLeagueEnd(guildID, clantag, notifyChannelId, rounds, season) {
@@ -495,31 +497,30 @@ async function capitalWeekendRaid() {
 const fs = require('fs').promises;
 
 async function scheduleWarExecution(apiCallTime, guildID, clantag, notifyChannelId) {
-  const currentTime = moment.utc();
-  const timeDifferenceInMs = apiCallTime - currentTime;
-  if (timeDifferenceInMs <= 10000) {
-    console.log("The time difference was under 10seconds: " + timeDifferenceInMs);
-  } else {
-    dcWarSchedduled.push(guildID)
+  const localEndingWarTime = apiCallTime.tz(localTimeZone);
 
-    console.log("War schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " in " + timeDifferenceInMs + "ms");
+  const minute = localEndingWarTime.minute();
+  const hour = localEndingWarTime.hour();
+  const dayOfMonth = localEndingWarTime.date();
+  const month = localEndingWarTime.month();
+  const scheduleString = `${minute} ${hour} ${dayOfMonth} ${month + 1} *`;
 
-    const delayInMinutes = Math.floor(timeDifferenceInMs / (1000 * 60));
-    const cronExpression = `0 */${delayInMinutes} * * *`;
+  dcWarSchedduled.push(guildID)
 
-    const scheduledJob = cron.schedule(cronExpression, async () => {
-      //remove from array
-      const index = dcWarSchedduled.indexOf(guildID);
-      if (index > -1) {
-        dcWarSchedduled.splice(index, 1);
-      } else {
-        console.error("war: Something went wrong, guildid was not found in array but schedduled")
-      }
+  console.log("War schedduled for guild " + guildID + "(channel: " + notifyChannelId + ") with clan " + clantag + " at " + localEndingWarTime.toString());
 
-      await warOver(guildID, clantag, notifyChannelId);
-    });
-    scheduledJob.start();
-  }
+  const job = schedule.scheduleJob(scheduleString, () => {
+    //remove from array
+    const index = dcWarSchedduled.indexOf(guildID);
+    if (index > -1) {
+      dcWarSchedduled.splice(index, 1);
+    } else {
+      console.error("war: Something went wrong, guildid was not found in array but scheduled")
+    }
+
+    warOver(guildID, clantag, notifyChannelId);
+  });
+
 }
 
 
@@ -721,7 +722,7 @@ async function warRequest() {
           const war = response.data;
 
           const endingWarTime = moment.utc(war.endTime, 'YYYYMMDDTHHmmss.SSS[Z]');
-          const apiCallTime = endingWarTime.subtract(10, 'seconds');
+          const apiCallTime = moment.utc(endingWarTime).startOf('minute');
 
           if (war.state == "inWar" || war.state == "preparation") {
             if (!dcWarSchedduled.includes(guildID)) {
