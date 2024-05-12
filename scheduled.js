@@ -724,7 +724,7 @@ async function warRequest() {
           const endingWarTime = moment.utc(war.endTime, 'YYYYMMDDTHHmmss.SSS[Z]');
           const apiCallTime = moment.utc(endingWarTime).startOf('minute');
 
-          if (war.state == "inWar" || war.state == "preparation") {
+          if (war.state == "inWar" /*|| war.state == "preparation"*/) {
             if (!dcWarSchedduled.includes(guildID)) {
               scheduleWarExecution(apiCallTime, guildID, clantag, item.notifyChannelId);
             }
