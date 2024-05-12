@@ -98,10 +98,10 @@ module.exports = {
 					if (err) throw err;
 				});
 
-				await interaction.editReply({ content: ":white_check_mark: The activity-Status for " + bold(member) + " got changed to: " + bold(activity), ephemeral: true });
+				await interaction.reply({ content: ":white_check_mark: The activity-Status for " + bold(member) + " got changed to: " + bold(activity), ephemeral: true });
 
 			} else {
-				await interaction.editReply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
+				await interaction.reply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
 			}
 		}
 
@@ -117,10 +117,10 @@ module.exports = {
 					if (err) throw err;
 				});
 
-				await interaction.editReply({ content: ":white_check_mark: The comment for " + bold(member) + " got changed to:\n" + bold(comment), ephemeral: true });
+				await interaction.reply({ content: ":white_check_mark: The comment for " + bold(member) + " got changed to:\n" + bold(comment), ephemeral: true });
 
 			} else {
-				await interaction.editReply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
+				await interaction.reply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
 			}
 		}
 
@@ -136,10 +136,10 @@ module.exports = {
 					if (err) throw err;
 				});
 
-				await interaction.editReply({ content: ":white_check_mark: The custom war preference for " + bold(member) + " got changed to: " + bold(preference), ephemeral: true });
+				await interaction.reply({ content: ":white_check_mark: The custom war preference for " + bold(member) + " got changed to: " + bold(preference), ephemeral: true });
 
 			} else {
-				await interaction.editReply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
+				await interaction.reply({ content: ":x: That user does not exist! Nothing changed", ephemeral: true });
 			}
 		}
 
