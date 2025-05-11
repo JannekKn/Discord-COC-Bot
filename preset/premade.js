@@ -134,10 +134,10 @@ async function updateClanMembers(interaction) {
                     const name = userResponse.data.name;
                     const role = userResponse.data.role;
                     const warPreference = userResponse.data.warPreference;
-
+                    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
                     // Update that info if needed
                     return new Promise((resolve, reject) => {
-                        db.query("INSERT INTO users (guildId, userTag, userName, userRole, userWarPref) VALUES (" + db.escape(interaction.guildId) + ", " + db.escape(tag) + ", " + db.escape(name) + ", " + db.escape(role) + ", " + db.escape(warPreference) + ") ON DUPLICATE KEY UPDATE userName = " + db.escape(name) + ", userRole = " + db.escape(role) + ", userWarPref = " + db.escape(warPreference) + ";", function (err, result, fields) {
+                        db.query("INSERT INTO users (guildId, userTag, userName, userRole, userWarPref, joined) VALUES (" + db.escape(interaction.guildId) + ", " + db.escape(tag) + ", " + db.escape(name) + ", " + db.escape(role) + ", " + db.escape(warPreference) + ", " + db.escape(currentDate) + ") ON DUPLICATE KEY UPDATE userName = " + db.escape(name) + ", userRole = " + db.escape(role) + ", userWarPref = " + db.escape(warPreference) + ";", function (err, result, fields) {
                             if (err) reject(err);
                             else resolve(tag);
                         });

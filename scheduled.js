@@ -28,6 +28,7 @@ const dcLeagueSchedduled = []
 const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 let client;
+
 async function start(dc) {
   client = dc;
   cron.schedule('0 10 * * 1', capitalWeekendRaid);

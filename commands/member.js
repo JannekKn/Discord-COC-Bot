@@ -159,11 +159,16 @@ module.exports = {
 
 				let postChunks = [];
 
+				const formattedDate = String(thisUser.joined.getDate()).padStart(2, '0') + '.' +
+                      String(thisUser.joined.getMonth() + 1).padStart(2, '0') + '.' +
+                      thisUser.joined.getFullYear();
+
 				// Function to add default user info
 				function addDefaultUserInfo() {
 					postChunks.push("User " + thisUser.userName + " Info:");
 					postChunks.push("\n\nTag: " + thisUser.userTag);
 					postChunks.push("\nRole: " + thisUser.userRole);
+					postChunks.push("\nJoined: " + formattedDate);
 					postChunks.push("\nWar preference: " + thisUser.userWarPref);
 					postChunks.push("\nCustom war preference: " + thisUser.userCustomWar);
 					postChunks.push("\nComment: " + (thisUser.userComment ? thisUser.userComment : "-"));
